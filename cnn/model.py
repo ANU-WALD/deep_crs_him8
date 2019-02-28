@@ -37,21 +37,10 @@ b16 = np.load("/scratch/director2107/CRS_Data/b16.npy")
 x = np.stack((b7, b8, b9, b10, b11, b12, b13, b14, b15, b16), axis=3)
 y = np.expand_dims(np.load("/scratch/director2107/CRS_Data/crs.npy"), axis=3)
 
-#x = np.nan_to_num(np.expand_dims(np.load("/scratch/director2107/CRS_Data/b7.npy"), axis=3))
-#y = np.nan_to_num(np.expand_dims(np.load("/scratch/director2107/CRS_Data/crs.npy"), axis=3))
-
 print("in mean", x.mean())
 print("out mean", y.mean())
 print(x.shape)
 print(y.shape)
 
-x_train = x[:2000, :, :, :]
-y_train = y[:2000, :]
-
-x_test = x[2000:, :, :, :]
-y_test = y[2000:, :]
-print("train x mean", x[:2000, :].mean())
-print("test x mean", x[2000:, :].mean())
-
 model = GetModel()
-history = model.fit(x_train, y_train, epochs=30, verbose=1, validation_data=(x_test, y_test))
+history = model.fit(x, y, epochs=30, verbose=1, validation_split=.2, shuffle=True)
