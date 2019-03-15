@@ -12,7 +12,7 @@ def root_mean_squared_error(y_true, y_pred):
 
 def GetModel():
     model = Sequential()
-    model.add(Dense(256, activation='relu', input_shape=(2,)))
+    model.add(Dense(256, activation='relu', input_shape=(12,)))
     model.add(Dropout(.2))
     model.add(Dense(128, activation='relu'))
     model.add(Dropout(.2))
@@ -80,15 +80,15 @@ print(b12[:5])
 #for comb in itertools.combinations(["7", "8", "9", "10", "11", "12", "13", "14", "15", "16"], 2):
 for comb in itertools.combinations(["8", "14"], 2):
     print("Starting", comb)
-    a = np.load("/scratch/director2107/CRS_Data/b{}.npy".format(comb[0]))[:300].flatten().reshape(-1,1)
+    a = np.load("/scratch/director2107/CRS_Data/b{}_1h.npy".format(comb[0]))[:300]#.flatten().reshape(-1,1)
     a = (a - a.min()) / (a.max() - a.min())
-    b = np.load("/scratch/director2107/CRS_Data/b{}.npy".format(comb[1]))[:300].flatten().reshape(-1,1)
+    b = np.load("/scratch/director2107/CRS_Data/b{}_1h.npy".format(comb[1]))[:300]#.flatten().reshape(-1,1)
     b = (b - b.min()) / (b.max() - b.min())
 
-    x = np.concatenate((a, b), axis=1)
+    x = np.concatenate((np.moveaxis(a, 1, -1).reshape(-1, 6), np.moveaxis(b, 1, -1).reshape(-1, 6)), axis=1)
     print(x.shape)
 
-    y = np.load("/scratch/director2107/CRS_Data/crs_flux.npy")[:300].flatten().reshape(-1,1)
+    y = np.load("/scratch/director2107/CRS_Data/crs_1h.npy")[:300].flatten().reshape(-1,1)
     x_train = x[:35000000,:]
     y_train = y[:35000000,:]
     x_test = x[35000000:,:]
