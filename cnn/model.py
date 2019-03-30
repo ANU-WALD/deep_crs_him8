@@ -65,8 +65,7 @@ history = model.fit(x, y, epochs=10, verbose=1, validation_split=.3, shuffle=Tru
 # Save the model once trained for later use
 #model.save('cnn_rain.h5')
 
-# Generate some data to see if model makes sense
+# Generate images from the data to see if model makes sense
 y_pred = model.predict(x[:1, :, :, :])
-print(y_pred)
 plt.imsave("pred_rain.png", y_pred[0,:,:,0])
 plt.imsave("obs_rain.png", y[0,:,:,0])
