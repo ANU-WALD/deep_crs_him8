@@ -1,36 +1,22 @@
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import BatchNormalization, Conv2D, Conv2DTranspose, Dropout
+from tensorflow.keras.layers import BatchNormalization, Conv2D
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import CSVLogger
 from matplotlib import pyplot as plt
 import numpy as np
 
-def GetModel():
+
+def GetModel(conv1_size):
     model = Sequential()
-    model.add(BatchNormalization(axis=3, input_shape=(400, 400, 3)))
-    # Size 400x400x3
-    model.add(Conv2D(32, (5, 5), strides=(2, 2), activation='relu', padding='same'))
+    model.add(BatchNormalization(axis=3, input_shape=(400, 400, 8)))
+    model.add(Conv2D(32, (conv1_size, conv1_size), activation='relu', padding='same'))
     model.add(BatchNormalization(axis=3))
-    # Size 200x200x32
-    model.add(Conv2D(64, (3, 3), strides=(2, 2), activation='relu', padding='same'))
+    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
     model.add(BatchNormalization(axis=3))
-    # Size 100x100x64
-    model.add(Conv2D(128, (3, 3), strides=(2, 2), activation='relu', padding='same'))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
     model.add(BatchNormalization(axis=3))
-    # Size 50x50x128
-    model.add(Conv2D(256, (5, 5), strides=(2, 2), activation='relu', padding='same'))
+    model.add(Conv2D(1, (1, 1), activation='relu', padding='same'))
     model.add(BatchNormalization(axis=3))
-    # Size 25x25x256
-    model.add(Conv2DTranspose(128, (5, 5), strides=(2, 2), activation='relu', padding='same'))
-    model.add(BatchNormalization(axis=3))
-    # Size 50x50x128
-    model.add(Conv2DTranspose(64, (3, 3), strides=(2, 2), activation='relu', padding='same'))
-    model.add(BatchNormalization(axis=3))
-    # Size 100x100x64
-    model.add(Conv2DTranspose(32, (3, 3), strides=(2, 2), activation='relu', padding='same'))
-    model.add(BatchNormalization(axis=3))
-    # Size 200x200x32
-    model.add(Conv2DTranspose(1, (5, 5), strides=(2, 2), activation='relu', padding='same'))
-    # Size 400x400x1
 
     model.compile(loss='mean_squared_error', optimizer=Adam(lr=0.0001), metrics=['mae'])
 
@@ -38,34 +24,30 @@ def GetModel():
 
     return model
 
+# Load measured precipitation to create Y (output of the network)
+y = np.log(1+np.load("/data/sat_precip/gpm_30.npy")[:,:,:,None])
+
 # Load and normalise satellite reflectances (Try just 3 bands [8,10,14]
 b8 = np.load("/data/sat_precip/b8_30.npy")
-b8 = (b8 - b8.mean()) / b8.std()
+b9 = np.load("/data/sat_precip/b9_30.npy")
 b10 = np.load("/data/sat_precip/b10_30.npy")
-b10 = (b10 - b10.mean()) / b10.std()
+b11 = np.load("/data/sat_precip/b11_30.npy")
+b12 = np.load("/data/sat_precip/b12_30.npy")
+b13 = np.load("/data/sat_precip/b13_30.npy")
 b14 = np.load("/data/sat_precip/b14_30.npy")
-b14 = (b14 - b14.mean()) / b14.std()
+b15 = np.load("/data/sat_precip/b15_30.npy")
 
-# Stack reflectances in depth to create X (input of the network)
-x = np.stack((b8, b10, b14), axis=3)
-
-# Load measured precipitation to create Y (output of the network)
-y = np.load("/data/sat_precip/gpm_30.npy")[:,:,:,None]
-
-# Verify dimensions of the data. 
-# We should have 1163 samples of 400x400 images for both X and Y
+x = np.stack((b8, b9, b10, b11, b12, b13, b14, b15), axis=3)
 print(x.shape, y.shape)
 
-# Instantiate model defined in function above
-model = GetModel()
+# Iterate through different convolution sizes for 1st
+for i in [1,3,5]:
+    # Instantiate model defined in function above
+    model = GetModel(i)
 
-# Fit data using a 70/30 validation split
-history = model.fit(x, y, epochs=10, verbose=1, validation_split=.3, shuffle=True)
+    # Fit data using a 70/30 validation split
+    csv_logger = CSVLogger('log_{}.csv'.format(i), append=True, separator=';')
+    model.fit(x, y, epochs=50, verbose=1, validation_split=.3, shuffle=True, callbacks=[csv_logger])
 
-# Save the model once trained for later use
-#model.save('cnn_rain.h5')
-
-# Generate images from the data to see if model makes sense
-y_pred = model.predict(x[:1, :, :, :])
-plt.imsave("pred_rain.png", y_pred[0,:,:,0])
-plt.imsave("obs_rain.png", y[0,:,:,0])
+    # Save the model once trained for later use
+    model.save('cnn{}_rain8.h5'.format(i))
